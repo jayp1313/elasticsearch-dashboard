@@ -1,18 +1,35 @@
-// lib/types.ts
-export interface Index {
+export type Index = {
   indexName: string;
-  alias: string | null;
+  alias?: string;
   documentCount: number;
   healthStatus: "green" | "yellow" | "red";
-  lastModified: string; // ISO string, not Date
-}
+  lastModified: string;
+};
 
-export interface Settings {
+export type Mapping = {
+  properties: Record<string, { type: string }>;
+};
+
+export type Settings = {
   oldIndexesToKeep: number;
   deltaUpdateFrequency: number;
   fullReindexFrequency: number;
-}
+};
 
-export interface Mapping {
-  properties: Record<string, { type: string }>;
-}
+export type Aggregation = {
+  id: string;
+  name: string;
+  type: string;
+  field: string;
+  enabled: boolean;
+};
+
+export type Stopword = {
+  id: string;
+  value: string;
+};
+
+export type Synonym = {
+  id: string;
+  terms: string[];
+};
