@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -8,11 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockMapping } from "../../lib/mockData";
 import { Mapping } from "../../types/types";
 
 const fetchMapping = async (): Promise<Mapping> => {
-  return mockMapping; // Replace with API call later
+  const res = await fetch("/api/mappings");
+  if (!res.ok) throw new Error("Failed to fetch mappings");
+  return res.json();
 };
 
 const MappingsPage: React.FC = () => {
@@ -30,24 +32,28 @@ const MappingsPage: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Index Mappings</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Field Name</TableHead>
-            <TableHead>Data Type</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {mapping &&
-            Object.entries(mapping.properties).map(([field, { type }]) => (
-              <TableRow key={field}>
-                <TableCell>{field}</TableCell>
-                <TableCell>{type}</TableCell>
+      <h1 className="text-2xl font-bold mb-6">Index Mappings</h1>
+      {Object.entries(mapping).map(([indexName, { mappings }]) => (
+        <div key={indexName} className="mb-10">
+          <h2 className="text-xl font-semibold mb-2">{indexName}</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Field Name</TableHead>
+                <TableHead>Data Type</TableHead>
               </TableRow>
-            ))}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(mappings.properties).map(([field, prop]) => (
+                <TableRow key={field}>
+                  <TableCell>{field}</TableCell>
+                  <TableCell>{prop.type || "object"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ))}
     </div>
   );
 };

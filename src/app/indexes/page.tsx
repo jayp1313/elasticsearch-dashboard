@@ -48,7 +48,7 @@ const runFullReindex = async (): Promise<void> => {
   });
 };
 
-const IndexManagement: React.FC = () => {
+const IndexManagement = () => {
   const queryClient = useQueryClient();
   const {
     data: indexes,

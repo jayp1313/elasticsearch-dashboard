@@ -6,8 +6,18 @@ export type Index = {
   lastModified: string;
 };
 
+export type MappingProperty = {
+  type: string;
+};
+
 export type Mapping = {
-  properties: Record<string, { type: string }>;
+  [indexName: string]: {
+    mappings: {
+      properties: {
+        [fieldName: string]: MappingProperty;
+      };
+    };
+  };
 };
 
 export type Settings = {
@@ -29,7 +39,12 @@ export type Stopword = {
   value: string;
 };
 
-export type Synonym = {
+export type SynonymRule = {
   id: string;
-  terms: string[];
+  synonyms: string;
+};
+
+export type SynonymSet = {
+  count: number;
+  synonyms_set: SynonymRule[];
 };

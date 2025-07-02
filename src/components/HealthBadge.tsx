@@ -1,9 +1,7 @@
 import { Badge, BadgeProps } from "@/components/ui/badge";
 
-type HealthStatus = "green" | "yellow" | "red";
-
 interface HealthBadgeProps extends BadgeProps {
-  status: HealthStatus;
+  status: string;
 }
 
 export default function HealthBadge({ status, ...props }: HealthBadgeProps) {

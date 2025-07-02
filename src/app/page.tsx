@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,12 +11,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { mockIndexes } from "../lib/mockData";
-import { Index } from "../types/types";
 import HealthBadge from "../components/HealthBadge";
 
-const fetchIndexes = async (): Promise<Index[]> => {
-  return mockIndexes;
+interface Root {
+  health: string;
+  status: string;
+  index: string;
+  uuid: string;
+  pri: string;
+  rep: string;
+  "docs.count": string;
+  "docs.deleted": string;
+  "store.size": string;
+  "pri.store.size": string;
+  alias?: string;
+}
+
+const fetchIndexes = async (): Promise<Root[]> => {
+  if (typeof window !== "undefined") {
+    const cached = sessionStorage.getItem("elasticsearch_indexes");
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  }
+
+  const res = await fetch("/api/indexes");
+  if (!res.ok) throw new Error("Failed to fetch indexes");
+
+  const data = await res.json();
+
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("elasticsearch_indexes", JSON.stringify(data));
+  }
+
+  return data;
 };
 
 export default function Dashboard() {
@@ -23,18 +52,23 @@ export default function Dashboard() {
     data: indexes,
     isLoading,
     error,
-  } = useQuery<Index[], Error>({
+  } = useQuery<Root[]>({
     queryKey: ["indexes"],
     queryFn: fetchIndexes,
   });
 
   const activeIndex = indexes?.find((index) => index.alias === "products");
+
   const totalDocuments =
-    indexes?.reduce((sum, index) => sum + index.documentCount, 0) || 0;
+    indexes?.reduce(
+      (sum, index) => sum + parseInt(index["docs.count"] || "0", 10),
+      0
+    ) || 0;
 
   if (isLoading)
     return <div className="text-center py-8">Loading dashboard data...</div>;
-  if (error)
+
+  if (error instanceof Error)
     return (
       <div className="text-red-500 text-center py-8">
         Error: {error.message}
@@ -52,7 +86,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-xl font-semibold">
-              {activeIndex?.indexName || "N/A"}
+              {activeIndex?.index || "N/A"}
             </p>
             <p className="text-sm text-gray-500">
               Alias: {activeIndex?.alias || "None"}
@@ -77,7 +111,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {activeIndex ? (
-              <HealthBadge status={activeIndex.healthStatus} />
+              <HealthBadge status={activeIndex.health} />
             ) : (
               <Badge variant="secondary">No active index</Badge>
             )}
@@ -97,18 +131,16 @@ export default function Dashboard() {
                 <TableHead>Alias</TableHead>
                 <TableHead>Documents</TableHead>
                 <TableHead>Health</TableHead>
-                <TableHead>Last Modified</TableHead>
+                <TableHead>Size</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {indexes?.map((index) => (
                 <TableRow
-                  key={index.indexName}
+                  key={index.index}
                   className={index.alias ? "bg-blue-50" : ""}
                 >
-                  <TableCell className="font-medium">
-                    {index.indexName}
-                  </TableCell>
+                  <TableCell className="font-medium">{index.index}</TableCell>
                   <TableCell>
                     {index.alias ? (
                       <Badge variant="default">{index.alias}</Badge>
@@ -116,13 +148,11 @@ export default function Dashboard() {
                       "N/A"
                     )}
                   </TableCell>
-                  <TableCell>{index.documentCount.toLocaleString()}</TableCell>
+                  <TableCell>{index["docs.count"]}</TableCell>
                   <TableCell>
-                    <HealthBadge status={index.healthStatus} />
+                    <HealthBadge status={index.health} />
                   </TableCell>
-                  <TableCell>
-                    {new Date(index.lastModified).toLocaleString()}
-                  </TableCell>
+                  <TableCell>{index["store.size"] || "N/A"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

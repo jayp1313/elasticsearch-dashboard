@@ -2,12 +2,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { mockSettings } from "../../lib/mockData";
 import { Settings } from "../../types/types";
 import { useState } from "react";
 
 const fetchSettings = async (): Promise<Settings> => {
-  return mockSettings; // Replace with API call later
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
 };
 
 const updateSettings = async (newSettings: Settings): Promise<void> => {
@@ -24,6 +25,7 @@ const SettingsPage: React.FC = () => {
     queryKey: ["settings"],
     queryFn: fetchSettings,
   });
+  console.log(" settings:", settings);
   const [form, setForm] = useState<Partial<Settings>>({});
 
   const mutation = useMutation<void, Error, Settings>({

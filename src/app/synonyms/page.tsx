@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,93 +13,91 @@ import {
 } from "@/components/ui/table";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { mockSynonyms } from "../../lib/mockData";
-import { Synonym } from "../../types/types";
-import { toast } from "sonner";
+import { SynonymSet } from "@/types/types";
+import { v4 as uuidv4 } from "uuid";
 
-const fetchSynonyms = async (): Promise<Synonym[]> => {
-  return mockSynonyms;
+const fetchSynonyms = async (): Promise<SynonymSet> => {
+  const res = await fetch("/api/synonyms");
+  if (!res.ok) throw new Error("Failed to fetch synonyms");
+  return res.json();
 };
 
-const addSynonym = async (terms: string[]): Promise<Synonym> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const newSynonym = { id: Date.now().toString(), terms };
-      console.log(`Added synonym: ${terms.join(", ")}`);
-      resolve(newSynonym);
-    }, 500);
+const postSynonym = async (synonyms: string) => {
+  const body = {
+    set_id: "new-synonyms",
+    rule_id: uuidv4(),
+    synonyms,
+  };
+  const res = await fetch("/api/synonyms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || "Failed to create synonym");
+  }
+  return res.json();
 };
 
-const deleteSynonym = async (id: string): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Deleted synonym: ${id}`);
-      resolve();
-    }, 500);
+const deleteSynonym = async (rule_id: string) => {
+  const res = await fetch("/api/synonyms", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      set_id: "new-synonyms",
+      rule_id,
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || "Failed to delete synonym");
+  }
+
+  return res.json();
 };
 
-const SynonymsPage: React.FC = () => {
-  const queryClient = useQueryClient();
+const SynonymsPage = () => {
   const [newTerm, setNewTerm] = useState("");
+  const queryClient = useQueryClient();
+
   const {
     data: synonyms,
+    isError,
     isLoading,
-    error,
-  } = useQuery<Synonym[], Error>({
+  } = useQuery<SynonymSet>({
     queryKey: ["synonyms"],
     queryFn: fetchSynonyms,
   });
 
-  const addMutation = useMutation<Synonym, Error, string[]>({
-    mutationFn: addSynonym,
-    onSuccess: (data) => {
-      queryClient.setQueryData<Synonym[]>(["synonyms"], (old) => [
-        ...(old || []),
-        data,
-      ]);
+  const addMutation = useMutation({
+    mutationFn: postSynonym,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["synonyms"] });
       setNewTerm("");
-      toast.success("Synonym set added successfully!");
-    },
-    onError: (error) => {
-      toast.error(`Failed to add synonym set: ${error.message}`);
     },
   });
 
-  const deleteMutation = useMutation<void, Error, string>({
+  const deleteMutation = useMutation({
     mutationFn: deleteSynonym,
-    onSuccess: (_, id) => {
-      queryClient.setQueryData<Synonym[]>(
-        ["synonyms"],
-        (old) => old?.filter((syn) => syn.id !== id) || []
-      );
-      toast.success("Synonym set removed successfully!");
-    },
-    onError: (error) => {
-      toast.error(`Failed to remove synonym set: ${error.message}`);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["synonyms"] });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const terms = newTerm
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t);
-    if (terms.length > 1) {
-      addMutation.mutate(terms);
-    }
+    addMutation.mutate(newTerm.trim());
   };
 
   if (isLoading)
     return <div className="text-center py-8">Loading synonyms...</div>;
-  if (error)
+
+  if (isError)
     return (
       <div className="text-red-500 text-center py-8">
-        Error: {error.message}
+        Error loading synonyms.
       </div>
     );
 
@@ -111,7 +110,7 @@ const SynonymsPage: React.FC = () => {
           <Input
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
-            placeholder="Enter comma-separated synonyms (e.g., tv, television, telly)"
+            placeholder="e.g., tv, television, telly"
             disabled={addMutation.isPending}
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -121,13 +120,21 @@ const SynonymsPage: React.FC = () => {
         <Button
           type="submit"
           disabled={
-            newTerm.split(",").filter((t) => t.trim()).length < 2 ||
-            addMutation.isPending
+            newTerm
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean).length < 2 || addMutation.isPending
           }
         >
-          {addMutation.isPending ? "Adding..." : "Add Synonym Set"}
+          {addMutation.isPending ? "Adding…" : "Add Synonym Set"}
         </Button>
       </form>
+
+      {addMutation.isError && (
+        <p className="text-red-500 text-sm">
+          {(addMutation.error as Error).message}
+        </p>
+      )}
 
       <div className="border rounded-lg">
         <Table>
@@ -138,16 +145,16 @@ const SynonymsPage: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {synonyms?.map((syn) => (
+            {synonyms?.synonyms_set.map((syn) => (
               <TableRow key={syn.id}>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {syn.terms.map((term, i) => (
+                    {syn.synonyms.split(",").map((term, i) => (
                       <span
                         key={i}
                         className="bg-gray-100 px-2 py-1 rounded-md text-sm"
                       >
-                        {term}
+                        {term.trim()}
                       </span>
                     ))}
                   </div>
