@@ -12,7 +12,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
 } from "@/components/ui/sidebar";
@@ -54,12 +53,12 @@ const menuItems = [
 export function AppSidebar() {
   return (
     <>
-      <Sidebar className="fixed inset-y-0 left-0 z-40 w-72">
-        <SidebarHeader className="p-4 border-b border-gray-700">
+      <Sidebar className="fixed inset-y-0 left-0 z-40 w-72 ">
+        <SidebarHeader className="p-4 border-b border-gray-700  bg-gray-800 text-white">
           <h1 className="text-xl font-bold">Elasticsearch Manager</h1>
         </SidebarHeader>
 
-        <SidebarContent className="flex-1 overflow-y-auto py-4">
+        <SidebarContent className="flex-1 overflow-y-auto py-4  bg-gray-800 text-white">
           <SidebarGroup>
             {menuItems.map((item) => (
               <div key={item.href}>
@@ -74,11 +73,6 @@ export function AppSidebar() {
             ))}
           </SidebarGroup>
         </SidebarContent>
-
-        <SidebarFooter className="p-4 text-sm text-gray-400 border-t border-gray-700">
-          <p>Development Mode</p>
-          <p>Using mock data</p>
-        </SidebarFooter>
       </Sidebar>
     </>
   );

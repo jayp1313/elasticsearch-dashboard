@@ -1,105 +1,150 @@
 "use client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useState } from "react";
+import { Header } from "@/components/Header";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
-import { mockAggregations } from "../../lib/mockData";
-import { Aggregation } from "../../types/types";
-import { toast } from "sonner";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const fetchAggregations = async (): Promise<Aggregation[]> => {
-  return mockAggregations;
-};
+const AGGREGATION_TYPES = [
+  "avg",
+  "sum",
+  "min",
+  "max",
+  "terms",
+  "histogram",
+  "date_histogram",
+];
 
-const updateAggregation = async (updatedAgg: Aggregation): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Updated aggregation: ${updatedAgg.id}`);
-      resolve();
-    }, 500);
-  });
-};
+const AGGREGATION_FIELDS = [
+  "price",
+  "stock",
+  "in_stock",
+  "category.keyword",
+  "name.keyword",
+  "created_at",
+];
 
 const AggregationsPage: React.FC = () => {
-  const queryClient = useQueryClient();
-  const {
-    data: aggregations,
-    isLoading,
-    error,
-  } = useQuery<Aggregation[], Error>({
-    queryKey: ["aggregations"],
-    queryFn: fetchAggregations,
-  });
+  const [aggType, setAggType] = useState("avg");
+  const [field, setField] = useState("price");
+  const [interval, setInterval] = useState(10);
+  const [bucketSize, setBucketSize] = useState(5);
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const mutation = useMutation<void, Error, Aggregation>({
-    mutationFn: updateAggregation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["aggregations"] });
-    },
-    onError: (error) => {
-      toast.error(`Failed to update aggregation: ${error.message}`);
-    },
-  });
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ aggType, field });
+      if (aggType === "histogram") params.append("interval", String(interval));
+      if (aggType === "terms") params.append("size", String(bucketSize));
 
-  const handleToggle = (agg: Aggregation) => {
-    mutation.mutate({ ...agg, enabled: !agg.enabled });
+      const res = await fetch(`/api/aggregations?${params.toString()}`);
+      const data = await res.json();
+      setResult(data);
+    } catch (error) {
+      console.error("Aggregation fetch failed", error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  if (isLoading)
-    return <div className="text-center py-8">Loading aggregations...</div>;
-  if (error)
-    return (
-      <div className="text-red-500 text-center py-8">
-        Error: {error.message}
-      </div>
-    );
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Aggregations Control</h1>
-
-      <div className="bg-white rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aggregation Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Field</TableHead>
-              <TableHead className="text-right">Enabled</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {aggregations?.map((agg) => (
-              <TableRow key={agg.id}>
-                <TableCell className="font-medium">{agg.name}</TableCell>
-                <TableCell>{agg.type}</TableCell>
-                <TableCell>{agg.field}</TableCell>
-                <TableCell className="text-right">
-                  <Switch
-                    checked={agg.enabled}
-                    onCheckedChange={() => handleToggle(agg)}
-                    disabled={mutation.isPending}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
+      <Header title="Aggregations Control" />
       <div className="text-sm text-gray-500">
         <p>
-          Aggregations help summarize and analyze your data. Enable the ones you
-          want to use in search queries.
+          Aggregations help summarize and analyze your data. Select the type and
+          field to run an aggregation.
         </p>
       </div>
+
+      <div className="flex gap-4 items-end flex-wrap">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Aggregation Type
+          </label>
+          <Select value={aggType} onValueChange={setAggType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              {AGGREGATION_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Field</label>
+          <Select value={field} onValueChange={setField}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select field" />
+            </SelectTrigger>
+            <SelectContent>
+              {AGGREGATION_FIELDS.map((f) => (
+                <SelectItem key={f} value={f}>
+                  {f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {aggType === "histogram" && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Interval</label>
+            <Input
+              type="number"
+              min={1}
+              value={interval}
+              onChange={(e) => setInterval(Number(e.target.value))}
+            />
+          </div>
+        )}
+
+        {aggType === "terms" && (
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Bucket Size
+            </label>
+            <Input
+              type="number"
+              min={1}
+              value={bucketSize}
+              onChange={(e) => setBucketSize(Number(e.target.value))}
+            />
+          </div>
+        )}
+
+        <Button onClick={handleSubmit} disabled={loading}>
+          {loading ? "Loading..." : "Run Aggregation"}
+        </Button>
+      </div>
+
+      {result && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Aggregation Result</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-sm bg-gray-100 p-4 rounded overflow-auto">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

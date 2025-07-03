@@ -16,15 +16,8 @@ import { Stopword } from "../../types/types";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 
-export const fetchActiveIndex = async (): Promise<string> => {
-  const res = await fetch("/api/active-index");
-  if (!res.ok) throw new Error("Failed to fetch active index");
-  const data = await res.json();
-  return data.activeIndex;
-};
-
-const fetchStopwords = async (indexName: string): Promise<Stopword[]> => {
-  const res = await fetch(`/api/stopwords?index=${indexName}`);
+const fetchStopwords = async (): Promise<Stopword[]> => {
+  const res = await fetch("/api/stopwords");
   if (!res.ok) throw new Error("Failed to load stopwords");
   const data = await res.json();
 
@@ -57,19 +50,13 @@ const StopwordsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [newWord, setNewWord] = useState("");
 
-  const { data: activeIndex } = useQuery({
-    queryKey: ["active-index"],
-    queryFn: fetchActiveIndex,
-  });
-
   const {
     data: stopwords,
     isLoading,
     error,
   } = useQuery<Stopword[], Error>({
-    queryKey: ["stopwords", activeIndex],
-    queryFn: () => fetchStopwords(activeIndex!),
-    enabled: !!activeIndex,
+    queryKey: ["stopwords"],
+    queryFn: fetchStopwords,
   });
 
   console.log(" stopwords:", stopwords);

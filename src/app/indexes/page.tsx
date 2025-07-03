@@ -34,33 +34,10 @@ const fetchIndexes = async (): Promise<Index[]> => {
 };
 
 const swapIndex = async (newIndex: string): Promise<void> => {
-  const cached = sessionStorage.getItem("elasticsearch_indexes");
-  const currentData = cached ? JSON.parse(cached) : [];
-  const active = currentData.find((idx: Index) => idx.alias === "products");
-
-  if (!active) throw new Error("No active index found");
-
-  const body = {
-    actions: [
-      {
-        remove: {
-          index: active.index,
-          alias: "products",
-        },
-      },
-      {
-        add: {
-          index: newIndex,
-          alias: "products",
-        },
-      },
-    ],
-  };
-
   const res = await fetch("/api/indexes/swap", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ newIndex }),
   });
 
   if (!res.ok) {

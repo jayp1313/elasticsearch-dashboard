@@ -1,4 +1,3 @@
-// app/layout.tsx
 "use client";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -21,14 +20,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ReactQueryDevtools initialIsOpen={false} />
           <SidebarProvider>
             <div className="flex min-h-screen">
-              {/* Sidebar: hidden on sm, shown on md+ */}
               <div className="hidden md:block w-72">
                 <AppSidebar />
               </div>
 
               <div className="flex-1 flex flex-col">
                 <MaxWidthWrapper>
-                  <main className="flex-1 py-5 md:min-w-6xl">{children}</main>
+                  <main className="flex-1 py-5 md:w-6xl">{children}</main>
                 </MaxWidthWrapper>
               </div>
             </div>

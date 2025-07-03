@@ -3,7 +3,26 @@ import client from "@/lib/elasticsearchClient";
 
 export async function POST(req: NextRequest) {
   try {
-    const { actions } = await req.json();
+    const { newIndex } = await req.json();
+
+    if (!newIndex) {
+      return NextResponse.json({ error: "Missing newIndex" }, { status: 400 });
+    }
+
+    const aliasRes = await client.indices.getAlias({ name: "products" });
+    const currentActiveIndex = Object.keys(aliasRes)[0];
+
+    if (!currentActiveIndex) {
+      return NextResponse.json(
+        { error: "No active index found" },
+        { status: 400 }
+      );
+    }
+
+    const actions = [
+      { remove: { index: currentActiveIndex, alias: "products" } },
+      { add: { index: newIndex, alias: "products" } },
+    ];
 
     const response = await client.indices.updateAliases({ actions });
 
@@ -13,9 +32,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Swap alias error:", error);
-    return NextResponse.json(
-      { error: error || "Swap failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Swap failed" }, { status: 500 });
   }
 }

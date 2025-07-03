@@ -1,5 +1,3 @@
-// app/api/indexes/route.ts
-
 import client from "@/lib/elasticsearchClient";
 import { NextResponse } from "next/server";
 

@@ -36,14 +36,9 @@ export const fetchActiveIndex = async (): Promise<{
   activeIndex: string;
   alias: string;
 }> => {
-  const cached = sessionStorage.getItem("active_index");
-  if (cached) return JSON.parse(cached);
-
   const res = await fetch("/api/active-index");
   if (!res.ok) throw new Error("Failed to fetch active index");
-
   const data = await res.json();
-  sessionStorage.setItem("active_index", JSON.stringify(data));
   return data;
 };
 

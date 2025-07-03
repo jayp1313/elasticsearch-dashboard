@@ -32,7 +32,7 @@ const MappingsPage: React.FC = () => {
   if (error) return <div className="text-red-500">Error: {error.message}</div>;
 
   return (
-    <div>
+    <div className="space-y-6">
       <Header title="Index Mappings" />
       {Object.entries(mapping).map(([indexName, { mappings }]) => (
         <div key={indexName} className="mb-10">

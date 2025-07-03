@@ -16,6 +16,7 @@ import { useState } from "react";
 import { SynonymSet } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 import { Header } from "@/components/Header";
+import { toast } from "sonner";
 
 const fetchSynonyms = async (): Promise<SynonymSet> => {
   const res = await fetch("/api/synonyms");
@@ -76,6 +77,7 @@ const SynonymsPage = () => {
     mutationFn: postSynonym,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["synonyms"] });
+      toast.success("Synonym added successfully!");
       setNewTerm("");
     },
   });
@@ -84,6 +86,7 @@ const SynonymsPage = () => {
     mutationFn: deleteSynonym,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["synonyms"] });
+      toast.success("Synonym  deleted successfully!");
     },
   });
 
