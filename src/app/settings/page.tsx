@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Settings } from "../../types/types";
 import { useState } from "react";
+import { Header } from "@/components/Header";
 
 const fetchSettings = async (): Promise<Settings> => {
   const res = await fetch("/api/settings");
@@ -43,7 +44,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Settings</h1>
+      <Header title="Settings" />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">Old Indexes to Keep (default: 3)</label>

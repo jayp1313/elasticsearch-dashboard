@@ -1,9 +1,15 @@
 export type Index = {
-  indexName: string;
+  health: string;
+  status: string;
+  index: string;
+  uuid: string;
+  pri: string;
+  rep: string;
+  "docs.count": string;
+  "docs.deleted": string;
+  "store.size": string;
+  "pri.store.size": string;
   alias?: string;
-  documentCount: number;
-  healthStatus: "green" | "yellow" | "red";
-  lastModified: string;
 };
 
 export type MappingProperty = {

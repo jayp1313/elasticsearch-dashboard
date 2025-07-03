@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Mapping } from "../../types/types";
+import { Header } from "@/components/Header";
 
 const fetchMapping = async (): Promise<Mapping> => {
   const res = await fetch("/api/mappings");
@@ -32,7 +33,7 @@ const MappingsPage: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Index Mappings</h1>
+      <Header title="Index Mappings" />
       {Object.entries(mapping).map(([indexName, { mappings }]) => (
         <div key={indexName} className="mb-10">
           <h2 className="text-xl font-semibold mb-2">{indexName}</h2>

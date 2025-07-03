@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -9,37 +10,79 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { mockIndexes } from "../../lib/mockData";
 import { Index } from "../../types/types";
 import HealthBadge from "../../components/HealthBadge";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
 
 const fetchIndexes = async (): Promise<Index[]> => {
-  return mockIndexes.filter((idx) => idx.indexName.startsWith("product"));
+  if (typeof window !== "undefined") {
+    const cached = sessionStorage.getItem("elasticsearch_indexes");
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  }
+  const res = await fetch("/api/indexes");
+  if (!res.ok) throw new Error("Failed to fetch indexes");
+
+  const data = await res.json();
+
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("elasticsearch_indexes", JSON.stringify(data));
+  }
+  return data;
 };
 
-const swapIndex = async (newIndexName: string): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Swapped alias to ${newIndexName}`);
-      resolve();
-    }, 1000);
+const swapIndex = async (newIndex: string): Promise<void> => {
+  const cached = sessionStorage.getItem("elasticsearch_indexes");
+  const currentData = cached ? JSON.parse(cached) : [];
+  const active = currentData.find((idx: Index) => idx.alias === "products");
+
+  if (!active) throw new Error("No active index found");
+
+  const body = {
+    actions: [
+      {
+        remove: {
+          index: active.index,
+          alias: "products",
+        },
+      },
+      {
+        add: {
+          index: newIndex,
+          alias: "products",
+        },
+      },
+    ],
+  };
+
+  const res = await fetch("/api/indexes/swap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    const { error } = await res.json();
+    throw new Error(error || "Swap failed");
+  }
 };
 
 const deleteIndex = async (indexName: string): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Deleted index ${indexName}`);
-      resolve();
-    }, 1000);
+  const res = await fetch("/api/indexes/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: indexName }),
   });
+
+  if (!res.ok) {
+    const { error } = await res.json();
+    throw new Error(error || "Delete failed");
+  }
 };
 
 const runFullReindex = async (): Promise<void> => {
-  // Simulate API call
   return new Promise((resolve) => {
     setTimeout(() => {
       console.log("Running full reindex");
@@ -62,7 +105,9 @@ const IndexManagement = () => {
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["indexes"] });
+      queryClient.invalidateQueries(["indexes"]);
+      sessionStorage.removeItem("elasticsearch_indexes");
+      window.location.reload();
       toast.success("Index swapped successfully!");
     },
     onError: (error) => {
@@ -73,8 +118,9 @@ const IndexManagement = () => {
   const deleteMutation = useMutation<void, Error, string>({
     mutationFn: deleteIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["indexes"] });
+      sessionStorage.removeItem("elasticsearch_indexes");
       toast.success("Index deleted successfully!");
+      window.location.reload();
     },
     onError: (error) => {
       toast.error(`Failed to delete index: ${error.message}`);
@@ -105,23 +151,21 @@ const IndexManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Index Management</h1>
+      <Header title="Index Management" />
 
       {activeIndex && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="font-semibold">Active Index</h2>
-              <p className="text-lg">{activeIndex.indexName}</p>
+              <p className="text-lg">{activeIndex.index}</p>
               <div className="flex items-center mt-1">
                 <span className="mr-2">Health:</span>
-                <HealthBadge status={activeIndex.healthStatus} />
+                <HealthBadge status={activeIndex.health} />
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">
-                {activeIndex.documentCount.toLocaleString()}
-              </p>
+              <p className="text-2xl font-bold">{activeIndex["docs.count"]}</p>
               <p className="text-sm">documents</p>
             </div>
           </div>
@@ -142,27 +186,30 @@ const IndexManagement = () => {
           </TableHeader>
           <TableBody>
             {oldIndexes.map((index) => (
-              <TableRow key={index.indexName}>
-                <TableCell className="font-medium">{index.indexName}</TableCell>
-                <TableCell>{index.documentCount.toLocaleString()}</TableCell>
+              <TableRow key={index.index}>
+                <TableCell className="font-medium">{index.index}</TableCell>
+                <TableCell>{index["docs.count"]}</TableCell>
                 <TableCell>
-                  <HealthBadge status={index.healthStatus} />
+                  <HealthBadge status={index.health} />
                 </TableCell>
                 <TableCell>
-                  {new Date(index.lastModified).toLocaleDateString()}
+                  {new Date(
+                    index?.lastModified || Date.now()
+                  ).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="space-x-2">
                   <Button
                     size="sm"
-                    onClick={() => swapMutation.mutate(index.indexName)}
+                    onClick={() => swapMutation.mutate(index.index)}
                     disabled={swapMutation.isPending}
                   >
                     {swapMutation.isPending ? "Swapping..." : "Make Active"}
                   </Button>
+
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => deleteMutation.mutate(index.indexName)}
+                    onClick={() => deleteMutation.mutate(index.index)}
                     disabled={deleteMutation.isPending}
                   >
                     {deleteMutation.isPending ? "Deleting..." : "Delete"}

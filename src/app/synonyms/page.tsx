@@ -15,6 +15,7 @@ import { TrashIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { SynonymSet } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
+import { Header } from "@/components/Header";
 
 const fetchSynonyms = async (): Promise<SynonymSet> => {
   const res = await fetch("/api/synonyms");
@@ -103,8 +104,7 @@ const SynonymsPage = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Synonyms Management</h1>
-
+      <Header title="Synonyms Management" />
       <form onSubmit={handleSubmit} className="space-y-2">
         <div>
           <Input
