@@ -105,8 +105,7 @@ const IndexManagement = () => {
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries();
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Index swapped successfully!");
     },
     onError: (error) => {
@@ -117,7 +116,7 @@ const IndexManagement = () => {
   const deleteMutation = useMutation<void, Error, string>({
     mutationFn: deleteIndex,
     onSuccess: () => {
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Index deleted successfully!");
     },
     onError: (error) => {
@@ -128,7 +127,7 @@ const IndexManagement = () => {
   const reindexMutation = useMutation<void, Error>({
     mutationFn: runFullReindex,
     onSuccess: () => {
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Full reindex started successfully!");
     },
     onError: (error) => {
