@@ -53,24 +53,30 @@ const MappingsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Field Name</TableHead>
-                  <TableHead>Data Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(mappings.properties || {}).map(
-                  ([field, prop]) => (
-                    <TableRow key={field}>
-                      <TableCell>{field}</TableCell>
-                      <TableCell>{prop.type || "object"}</TableCell>
-                    </TableRow>
-                  )
-                )}
-              </TableBody>
-            </Table>
+            <div className="border rounded-lg overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader className="bg-gray-100">
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">
+                      Field Name
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      Data Type
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(mappings.properties || {}).map(
+                    ([field, prop]) => (
+                      <TableRow key={field}>
+                        <TableCell>{field}</TableCell>
+                        <TableCell>{prop.type || "object"}</TableCell>
+                      </TableRow>
+                    )
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         ))}
     </div>
