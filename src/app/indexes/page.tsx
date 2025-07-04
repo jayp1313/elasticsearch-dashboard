@@ -18,13 +18,25 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Loader from "../utility/Loader";
+import { Loader2, RefreshCw, RotateCw } from "lucide-react";
 
 const fetchIndexes = async (): Promise<Index[]> => {
+  const cacheKey = "indexesData";
+
+  const cachedData = sessionStorage.getItem(cacheKey);
+  if (cachedData) {
+    try {
+      return JSON.parse(cachedData);
+    } catch (error) {
+      console.warn("Failed to parse cached indexes:", error);
+    }
+  }
+
   const res = await fetch("/api/indexes");
   if (!res.ok) throw new Error("Failed to fetch indexes");
 
-  const data = await res.json();
-
+  const data: Index[] = await res.json();
+  sessionStorage.setItem(cacheKey, JSON.stringify(data));
   return data;
 };
 
@@ -105,6 +117,7 @@ const IndexManagement = () => {
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
     onSuccess: () => {
+      sessionStorage.removeItem("indexesData");
       queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Index swapped successfully!");
     },
@@ -116,6 +129,7 @@ const IndexManagement = () => {
   const deleteMutation = useMutation<void, Error, string>({
     mutationFn: deleteIndex,
     onSuccess: () => {
+      sessionStorage.removeItem("indexesData");
       queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Index deleted successfully!");
     },
@@ -127,6 +141,7 @@ const IndexManagement = () => {
   const reindexMutation = useMutation<void, Error>({
     mutationFn: runFullReindex,
     onSuccess: () => {
+      sessionStorage.removeItem("indexesData");
       queryClient.invalidateQueries({ queryKey: ["indexes"] });
       toast.success("Full reindex started successfully!");
     },
@@ -147,70 +162,96 @@ const IndexManagement = () => {
   const oldIndexes = indexes?.filter((index) => !index.alias) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header title="Index Management" />
 
       {activeIndex && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="font-semibold">Active Index</h2>
-              <p className="text-lg">{activeIndex.index}</p>
-              <div className="flex items-center mt-1">
-                <span className="mr-2">Health:</span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="space-y-2">
+              <h2 className="text-sm font-medium text-muted-foreground">
+                Active Index
+              </h2>
+              <p className="text-2xl font-bold text-gray-900">
+                {activeIndex.index}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Health:</span>
                 <HealthBadge color={activeIndex.health} />
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">{activeIndex["docs.count"]}</p>
-              <p className="text-sm">documents</p>
+            <div className="p-5">
+              <p className="text-3xl font-bold ">
+                {activeIndex["docs.count"]?.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500 text-center">documents</p>
             </div>
           </div>
         </div>
       )}
 
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Old Indexes</h2>
+      <div className="border rounded-lg overflow-hidden shadow-sm">
+        <div className="p-4 bg-gray-50 border-b">
+          <h2 className="text-lg font-semibold text-gray-800">Old Indexes</h2>
+        </div>
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-100">
             <TableRow>
-              <TableHead>Index Name</TableHead>
-              <TableHead>Documents</TableHead>
-              <TableHead>Health</TableHead>
-              <TableHead>Last Modified</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">
+                Index Name
+              </TableHead>
+              <TableHead className="whitespace-nowrap">Documents</TableHead>
+              <TableHead className="whitespace-nowrap">Health</TableHead>
+              <TableHead className="whitespace-nowrap">Last Modified</TableHead>
+              <TableHead className="whitespace-nowrap text-center">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {oldIndexes.map((index) => (
-              <TableRow key={index.index}>
-                <TableCell className="font-medium">{index.index}</TableCell>
-                <TableCell>{index["docs.count"]}</TableCell>
+              <TableRow key={index.index} className="hover:bg-gray-50">
+                <TableCell className="font-medium">
+                  <span className="font-mono text-sm">{index.index}</span>
+                </TableCell>
+                <TableCell className="">
+                  {index["docs.count"]?.toLocaleString()}
+                </TableCell>
                 <TableCell>
                   <HealthBadge color={index.health} />
                 </TableCell>
                 <TableCell>
                   {new Date(
                     index?.lastModified || Date.now()
-                  ).toLocaleDateString()}
+                  ).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </TableCell>
-                <TableCell className="space-x-2">
+                <TableCell className="flex justify-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => swapMutation.mutate(index.index)}
                     disabled={swapMutation.isPending}
                   >
-                    {swapMutation.isPending ? "Swapping..." : "Make Active"}
+                    {swapMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Make Active
                   </Button>
-
                   <Button
                     size="sm"
-                    variant="destructive"
+                    variant="outline"
+                    className="hover:bg-red-50 hover:text-red-600 border-red-200 text-red-600"
                     onClick={() => deleteMutation.mutate(index.index)}
                     disabled={deleteMutation.isPending}
                   >
-                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                    {deleteMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
@@ -219,37 +260,54 @@ const IndexManagement = () => {
         </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
+      <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
         <Button
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto "
           onClick={() => reindexMutation.mutate()}
           disabled={reindexMutation.isPending}
         >
-          {reindexMutation.isPending ? "Processing..." : "Run Full Reindex"}
+          {reindexMutation.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
+          Run Full Reindex
         </Button>
+
         <Button
           variant="outline"
-          className="w-full sm:w-auto"
-          onClick={() => refetch()}
+          className="w-full sm:w-auto border-gray-300 hover:bg-gray-50"
+          onClick={() => {
+            sessionStorage.removeItem("indexesData");
+            refetch();
+          }}
         >
+          <RotateCw className="mr-2 h-4 w-4" />
           Check for Updates Now
         </Button>
-        <div className="flex items-center gap-4 mb-4">
-          <Label htmlFor="refetchInterval" className="font-semibold">
-            Auto-refetch interval (seconds):
+
+        <div className="flex-1 flex items-center gap-4">
+          <Label
+            htmlFor="refetchInterval"
+            className="text-sm font-medium text-gray-700"
+          >
+            Auto-refresh:
           </Label>
-          <Input
-            id="refetchInterval"
-            type="number"
-            min={5}
-            className="border rounded px-2 py-1 w-20"
-            value={refetchInterval}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              if (val >= 5) setRefetchInterval(val);
-            }}
-            title="Minimum 5 seconds"
-          />
+          <div className="relative w-24">
+            <Input
+              id="refetchInterval"
+              type="number"
+              min={5}
+              value={refetchInterval}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val >= 5) setRefetchInterval(val);
+              }}
+            />
+            <span className="absolute right-3 top-2 text-sm text-gray-500">
+              s
+            </span>
+          </div>
         </div>
       </div>
     </div>

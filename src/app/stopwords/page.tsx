@@ -10,12 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrashIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { Stopword } from "../../types/types";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import Loader from "../utility/Loader";
+import { Loader2 } from "lucide-react";
 
 const fetchStopwords = async (): Promise<Stopword[]> => {
   const res = await fetch("/api/stopwords");
@@ -107,6 +107,13 @@ const StopwordsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <Header title="Stopwords Management" />
+      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg border">
+        <p className="leading-6">
+          {" "}
+          Stopwords are common words that are excluded from search queries to
+          improve performance.
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={newWord}
@@ -136,25 +143,22 @@ const StopwordsPage: React.FC = () => {
                 <TableCell className="font-medium">{word.value}</TableCell>
                 <TableCell>
                   <Button
-                    variant="destructive"
-                    size="icon"
+                    size="sm"
+                    variant="outline"
+                    className="hover:bg-red-50 hover:text-red-600 border-red-200 text-red-600"
                     onClick={() => deleteMutation.mutate(word.id)}
                     disabled={deleteMutation.isPending}
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    {deleteMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </div>
-
-      <div className="text-sm text-gray-500">
-        <p>
-          Stopwords are common words that are excluded from search queries to
-          improve performance.
-        </p>
       </div>
     </div>
   );

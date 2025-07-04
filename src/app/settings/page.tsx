@@ -66,6 +66,12 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <Header title="Settings" />
+      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg border">
+        <p className="leading-6">
+          Manage indexing frequency and retention settings for optimal data
+          performance.
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">Old Indexes to Keep (default: 3)</label>

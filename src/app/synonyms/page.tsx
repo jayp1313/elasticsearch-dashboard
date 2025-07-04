@@ -11,13 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrashIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { SynonymSet } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
 import Loader from "../utility/Loader";
+import { Loader2 } from "lucide-react";
 
 const fetchSynonyms = async (): Promise<SynonymSet> => {
   const res = await fetch("/api/synonyms");
@@ -108,6 +108,12 @@ const SynonymsPage = () => {
   return (
     <div className="space-y-6">
       <Header title="Synonyms Management" />
+      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg border">
+        <p className="leading-6">
+          Synonyms help expand search queries by treating different terms as
+          equivalent.
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-2">
         <div>
           <Input
@@ -164,25 +170,22 @@ const SynonymsPage = () => {
                 </TableCell>
                 <TableCell>
                   <Button
-                    variant="destructive"
-                    size="icon"
+                    size="sm"
+                    variant="outline"
+                    className="hover:bg-red-50 hover:text-red-600 border-red-200 text-red-600"
                     onClick={() => deleteMutation.mutate(syn.id)}
                     disabled={deleteMutation.isPending}
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    {deleteMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </div>
-
-      <div className="text-sm text-gray-500">
-        <p>
-          Synonyms help expand search queries by treating different terms as
-          equivalent.
-        </p>
       </div>
     </div>
   );

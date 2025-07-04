@@ -7,7 +7,6 @@ import { AppSidebar } from "@/components/Sidebar";
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import MaxWidthWrapper from "./utility/MaxWidthWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 const queryClient = new QueryClient();
@@ -19,17 +18,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <ReactQueryDevtools initialIsOpen={false} />
           <SidebarProvider>
-            <div className="flex min-h-screen">
-              <div className="hidden md:block w-72">
+            <div className="min-h-screen contents">
+              <div className="md:w-72">
                 <AppSidebar />
               </div>
 
               <div className="flex-1 flex flex-col">
-                <MaxWidthWrapper className="flex items-center">
-                  <main className="flex-1 py-5 md:w-6xl min-h-screen">
-                    {children}
-                  </main>
-                </MaxWidthWrapper>
+                <main className="flex-1 p-6 md:w-full min-h-screen max-w-screen">
+                  {children}
+                </main>
               </div>
             </div>
           </SidebarProvider>
