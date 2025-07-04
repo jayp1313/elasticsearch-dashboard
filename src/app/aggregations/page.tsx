@@ -35,7 +35,7 @@ const AGGREGATION_FIELDS_MAP: Record<string, string[]> = {
   date_histogram: ["created_at"],
 };
 
-export const fetchAggregation = async ({
+const fetchAggregation = async ({
   aggType,
   field,
   interval,
