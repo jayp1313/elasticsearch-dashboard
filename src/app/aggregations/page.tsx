@@ -40,7 +40,7 @@ export const fetchAggregation = async ({
   field,
   interval,
   size,
-}: AggregationParams): Promise<any> => {
+}: AggregationParams): Promise<AggregationParams> => {
   const params = new URLSearchParams({ aggType, field });
   if (aggType === "histogram" && interval)
     params.append("interval", interval.toString());
@@ -57,7 +57,7 @@ const AggregationsPage: React.FC = () => {
   const [field, setField] = useState("price");
   const [interval, setInterval] = useState(10);
   const [bucketSize, setBucketSize] = useState(5);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AggregationParams>();
 
   const allowedFields = AGGREGATION_FIELDS_MAP[aggType] || [];
 

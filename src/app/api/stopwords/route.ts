@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import client from "@/lib/elasticsearchClient";
+import { get } from "lodash";
 
 export async function GET() {
   try {
@@ -18,9 +19,19 @@ export async function GET() {
       name: "index.analysis.filter.my_stop_filter.stopwords",
     });
 
-    const stopwords =
-      res[activeIndex]?.settings?.index?.analysis?.filter?.my_stop_filter
-        ?.stopwords || [];
+    const stopwords = get(
+      res,
+      [
+        activeIndex,
+        "settings",
+        "index",
+        "analysis",
+        "filter",
+        "my_stop_filter",
+        "stopwords",
+      ],
+      []
+    );
 
     return NextResponse.json({ stopwords });
   } catch (error) {

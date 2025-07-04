@@ -13,6 +13,15 @@ export type Index = {
   lastModified: Date;
 };
 
+export type Document = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  in_stock: boolean;
+};
+
 export type MappingProperty = {
   type: string;
 };

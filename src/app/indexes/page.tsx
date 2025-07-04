@@ -92,7 +92,6 @@ const IndexManagement = () => {
   useEffect(() => {
     if (refetchInterval < 5) return;
     const timer = setInterval(() => {
-      sessionStorage.removeItem("elasticsearch_indexes");
       refetch();
     }, refetchInterval * 1000);
 
@@ -106,8 +105,7 @@ const IndexManagement = () => {
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries(["indexes"]);
-      sessionStorage.removeItem("elasticsearch_indexes");
+      queryClient.invalidateQueries();
       window.location.reload();
       toast.success("Index swapped successfully!");
     },
@@ -119,7 +117,6 @@ const IndexManagement = () => {
   const deleteMutation = useMutation<void, Error, string>({
     mutationFn: deleteIndex,
     onSuccess: () => {
-      sessionStorage.removeItem("elasticsearch_indexes");
       window.location.reload();
       toast.success("Index deleted successfully!");
     },
@@ -131,7 +128,6 @@ const IndexManagement = () => {
   const reindexMutation = useMutation<void, Error>({
     mutationFn: runFullReindex,
     onSuccess: () => {
-      sessionStorage.removeItem("elasticsearch_indexes");
       window.location.reload();
       toast.success("Full reindex started successfully!");
     },
