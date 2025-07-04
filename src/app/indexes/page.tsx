@@ -210,7 +210,7 @@ const IndexManagement = () => {
           </TableHeader>
           <TableBody>
             {oldIndexes.map((index) => (
-              <TableRow key={index.index} className="hover:bg-gray-50">
+              <TableRow key={index.index}>
                 <TableCell className="font-medium">
                   <span className="font-mono text-sm">{index.index}</span>
                 </TableCell>

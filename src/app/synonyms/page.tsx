@@ -145,9 +145,9 @@ const SynonymsPage = () => {
         </p>
       )}
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-hidden shadow-sm">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-100">
             <TableRow>
               <TableHead>Synonym Set</TableHead>
               <TableHead className="w-24">Actions</TableHead>
