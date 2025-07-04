@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import client from "@/lib/elasticsearchClient";
 import { fetchAllProducts } from "@/lib/dataSource";
+import { Document } from "@/types/types";
 
 export async function POST() {
   try {
@@ -11,40 +12,38 @@ export async function POST() {
 
     await client.indices.create({
       index: newIndex,
-      body: {
-        settings: {
-          analysis: {
-            filter: {
-              my_stop_filter: {
-                type: "stop",
-                stopwords: ["the", "and", "is", "at", "which", "on"],
-              },
+      settings: {
+        analysis: {
+          filter: {
+            my_stop_filter: {
+              type: "stop",
+              stopwords: ["the", "and", "is", "at", "which", "on"],
             },
-            analyzer: {
-              custom_english: {
-                type: "custom",
-                tokenizer: "standard",
-                filter: ["lowercase", "my_stop_filter"],
-              },
+          },
+          analyzer: {
+            custom_english: {
+              type: "custom",
+              tokenizer: "standard",
+              filter: ["lowercase", "my_stop_filter"],
             },
           },
         },
-        mappings: {
-          properties: {
-            id: { type: "keyword" },
-            name: { type: "text", analyzer: "custom_english" },
-            category: { type: "keyword" },
-            price: { type: "float" },
-            stock: { type: "integer" },
-            in_stock: { type: "boolean" },
-            created_at: { type: "date" },
-          },
+      },
+      mappings: {
+        properties: {
+          id: { type: "keyword" },
+          name: { type: "text", analyzer: "custom_english" },
+          category: { type: "keyword" },
+          price: { type: "float" },
+          stock: { type: "integer" },
+          in_stock: { type: "boolean" },
+          created_at: { type: "date" },
         },
       },
     });
 
     const products = await fetchAllProducts();
-    const body = products.flatMap((doc: any) => [{ index: {} }, doc]);
+    const body = products.flatMap((doc: Document) => [{ index: {} }, doc]);
 
     const bulkResponse = await client.bulk({
       index: newIndex,

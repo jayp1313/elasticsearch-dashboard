@@ -35,27 +35,30 @@ const MappingsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <Header title="Index Mappings" />
-      {Object.entries(mapping).map(([indexName, { mappings }]) => (
-        <div key={indexName} className="mb-10">
-          <h2 className="text-xl font-semibold mb-2">{indexName}</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Field Name</TableHead>
-                <TableHead>Data Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(mappings.properties).map(([field, prop]) => (
-                <TableRow key={field}>
-                  <TableCell>{field}</TableCell>
-                  <TableCell>{prop.type || "object"}</TableCell>
+      {mapping &&
+        Object.entries(mapping).map(([indexName, { mappings }]) => (
+          <div key={indexName} className="mb-10">
+            <h2 className="text-xl font-semibold mb-2">{indexName}</h2>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Field Name</TableHead>
+                  <TableHead>Data Type</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ))}
+              </TableHeader>
+              <TableBody>
+                {Object.entries(mappings.properties || {}).map(
+                  ([field, prop]) => (
+                    <TableRow key={field}>
+                      <TableCell>{field}</TableCell>
+                      <TableCell>{prop.type || "object"}</TableCell>
+                    </TableRow>
+                  )
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        ))}
     </div>
   );
 };

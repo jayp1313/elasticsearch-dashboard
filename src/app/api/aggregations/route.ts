@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import client from "@/lib/elasticsearchClient";
+import { estypes } from "@elastic/elasticsearch";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -12,31 +13,39 @@ export async function GET(req: NextRequest) {
     const aliasRes = await client.indices.getAlias({ name: "products" });
     const indexName = Object.keys(aliasRes)[0];
 
-    const aggs: any = {};
+    const aggs: Record<string, estypes.AggregationsAggregationContainer> = {};
 
     switch (aggType) {
       case "avg":
       case "sum":
       case "min":
       case "max":
-        aggs["result"] = { [aggType]: { field } };
+        aggs.result = { [aggType]: { field } };
         break;
       case "terms":
-        aggs["result"] = {
-          terms: { field, size: size ? parseInt(size) : 5 },
+        aggs.result = {
+          terms: {
+            field,
+            size: size ? parseInt(size) : 5,
+          } as estypes.AggregationsTermsAggregation,
         };
         break;
       case "histogram":
-        aggs["result"] = {
-          histogram: { field, interval: interval ? parseInt(interval) : 10 },
+        aggs.result = {
+          histogram: {
+            field,
+            interval: interval ? parseInt(interval) : 10,
+          } as estypes.AggregationsHistogramAggregation,
         };
         break;
       case "date_histogram":
-        aggs["result"] = {
+        aggs.result = {
           date_histogram: {
             field,
-            calendar_interval: interval || "day",
-          },
+            calendar_interval:
+              interval || ("day" as estypes.AggregationsCalendarInterval),
+            format: "yyyy-MM-dd",
+          } as estypes.AggregationsDateHistogramAggregation,
         };
         break;
       default:
@@ -49,14 +58,18 @@ export async function GET(req: NextRequest) {
     const response = await client.search({
       index: indexName,
       size: 0,
-      body: { aggs },
+      aggs,
     });
 
-    return NextResponse.json(response.aggregations?.result || {});
+    const result = response.aggregations?.result;
+    return NextResponse.json(result ?? {});
   } catch (error) {
     console.error("Aggregation fetch error", error);
     return NextResponse.json(
-      { error: "Failed to fetch aggregation" },
+      {
+        error: "Failed to fetch aggregation",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
