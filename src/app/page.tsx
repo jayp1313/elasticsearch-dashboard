@@ -14,21 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import HealthBadge from "../components/HealthBadge";
 import { Index } from "@/types/types";
 import { Header } from "@/components/Header";
+import Loader from "./utility/Loader";
 
 const fetchIndexes = async (): Promise<Index[]> => {
-  if (typeof window !== "undefined") {
-    const cached = sessionStorage.getItem("elasticsearch_indexes");
-    if (cached) return JSON.parse(cached);
-  }
-
   const res = await fetch("/api/indexes");
   if (!res.ok) throw new Error("Failed to fetch indexes");
 
   const data = await res.json();
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("elasticsearch_indexes", JSON.stringify(data));
-  }
-
   return data;
 };
 
@@ -67,8 +59,7 @@ export default function Dashboard() {
     (index) => index.index === activeIndex?.activeIndex
   )?.health;
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading dashboard data...</div>;
+  if (isLoading) return <Loader />;
 
   if (error instanceof Error)
     return (
@@ -81,7 +72,6 @@ export default function Dashboard() {
     <div className="space-y-6 px-4 md:px-0">
       <Header title="Elasticsearch Dashboard" />
 
-      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
@@ -116,15 +106,14 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {activeIndex ? (
-              <HealthBadge status={activeIndexHealth || "unknown"} />
+              <HealthBadge color={activeIndexHealth || "unknown"} />
             ) : (
-              <Badge variant="secondary">No active index</Badge>
+              <Badge>No active index</Badge>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Table */}
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>All Product Indexes</CardTitle>
@@ -141,6 +130,9 @@ export default function Dashboard() {
                   <TableHead className="whitespace-nowrap">Docs</TableHead>
                   <TableHead className="whitespace-nowrap">Health</TableHead>
                   <TableHead className="whitespace-nowrap">Size</TableHead>
+                  <TableHead className="whitespace-nowrap">
+                    Last Modified
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,18 +148,19 @@ export default function Dashboard() {
                       {index.alias ? (
                         <Badge variant="default">{index.alias}</Badge>
                       ) : (
-                        "N/A"
+                        "-"
                       )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {index["docs.count"]}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <HealthBadge status={index.health} />
+                      <HealthBadge color={index.health} />
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {index["store.size"] || "N/A"}
                     </TableCell>
+                    <TableCell>{index.lastModified.toString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -10,6 +10,7 @@ export type Index = {
   "store.size": string;
   "pri.store.size": string;
   alias?: string;
+  lastModified: Date;
 };
 
 export type MappingProperty = {
@@ -39,6 +40,13 @@ export type Aggregation = {
   field: string;
   enabled: boolean;
 };
+
+export interface AggregationParams {
+  aggType: string;
+  field: string;
+  interval?: number;
+  size?: number;
+}
 
 export type Stopword = {
   id: string;

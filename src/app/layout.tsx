@@ -25,8 +25,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
 
               <div className="flex-1 flex flex-col">
-                <MaxWidthWrapper>
-                  <main className="flex-1 py-5 md:w-6xl">{children}</main>
+                <MaxWidthWrapper className="flex items-center">
+                  <main className="flex-1 py-5 md:w-6xl min-h-screen">
+                    {children}
+                  </main>
                 </MaxWidthWrapper>
               </div>
             </div>

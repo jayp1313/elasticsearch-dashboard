@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Mapping } from "../../types/types";
 import { Header } from "@/components/Header";
+import Loader from "../utility/Loader";
 
 const fetchMapping = async (): Promise<Mapping> => {
   const res = await fetch("/api/mappings");
@@ -28,7 +29,7 @@ const MappingsPage: React.FC = () => {
     queryFn: fetchMapping,
   });
 
-  if (isLoading) return <div className="text-center">Loading...</div>;
+  if (isLoading) return <Loader />;
   if (error) return <div className="text-red-500">Error: {error.message}</div>;
 
   return (

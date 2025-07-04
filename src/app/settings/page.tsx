@@ -6,6 +6,7 @@ import { Settings } from "../../types/types";
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
+import Loader from "../utility/Loader";
 
 const fetchSettings = async (): Promise<Settings> => {
   const res = await fetch("/api/settings");
@@ -51,7 +52,7 @@ const SettingsPage: React.FC = () => {
     },
   });
 
-  if (isLoading) return <div className="text-center">Loading...</div>;
+  if (isLoading) return <Loader />;
   if (error) return <div className="text-red-500">Error: {error.message}</div>;
 
   const handleSubmit = (e: React.FormEvent) => {

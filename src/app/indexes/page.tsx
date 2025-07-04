@@ -14,22 +14,17 @@ import { Index } from "../../types/types";
 import HealthBadge from "../../components/HealthBadge";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
+import { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Loader from "../utility/Loader";
 
 const fetchIndexes = async (): Promise<Index[]> => {
-  if (typeof window !== "undefined") {
-    const cached = sessionStorage.getItem("elasticsearch_indexes");
-    if (cached) {
-      return JSON.parse(cached);
-    }
-  }
   const res = await fetch("/api/indexes");
   if (!res.ok) throw new Error("Failed to fetch indexes");
 
   const data = await res.json();
 
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("elasticsearch_indexes", JSON.stringify(data));
-  }
   return data;
 };
 
@@ -60,24 +55,53 @@ const deleteIndex = async (indexName: string): Promise<void> => {
 };
 
 const runFullReindex = async (): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("Running full reindex");
-      resolve();
-    }, 1500);
+  const res = await fetch("/api/reindex", {
+    method: "POST",
   });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to start full reindex");
+  }
+
+  const data = await res.json();
+  console.log("Reindex started:", data);
 };
 
 const IndexManagement = () => {
   const queryClient = useQueryClient();
+
+  const [refetchInterval, setRefetchInterval] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("refetch_interval");
+      return saved ? parseInt(saved) : 60;
+    }
+    return 60;
+  });
+
   const {
     data: indexes,
     isLoading,
     error,
+    refetch,
   } = useQuery<Index[], Error>({
     queryKey: ["indexes"],
     queryFn: fetchIndexes,
   });
+
+  useEffect(() => {
+    if (refetchInterval < 5) return;
+    const timer = setInterval(() => {
+      sessionStorage.removeItem("elasticsearch_indexes");
+      refetch();
+    }, refetchInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [refetchInterval, refetch]);
+
+  useEffect(() => {
+    sessionStorage.setItem("refetch_interval", refetchInterval.toString());
+  }, [refetchInterval]);
 
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
@@ -96,8 +120,8 @@ const IndexManagement = () => {
     mutationFn: deleteIndex,
     onSuccess: () => {
       sessionStorage.removeItem("elasticsearch_indexes");
-      toast.success("Index deleted successfully!");
       window.location.reload();
+      toast.success("Index deleted successfully!");
     },
     onError: (error) => {
       toast.error(`Failed to delete index: ${error.message}`);
@@ -107,6 +131,8 @@ const IndexManagement = () => {
   const reindexMutation = useMutation<void, Error>({
     mutationFn: runFullReindex,
     onSuccess: () => {
+      sessionStorage.removeItem("elasticsearch_indexes");
+      window.location.reload();
       toast.success("Full reindex started successfully!");
     },
     onError: (error) => {
@@ -114,8 +140,7 @@ const IndexManagement = () => {
     },
   });
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading indexes...</div>;
+  if (isLoading) return <Loader />;
   if (error)
     return (
       <div className="text-red-500 text-center py-8">
@@ -138,7 +163,7 @@ const IndexManagement = () => {
               <p className="text-lg">{activeIndex.index}</p>
               <div className="flex items-center mt-1">
                 <span className="mr-2">Health:</span>
-                <HealthBadge status={activeIndex.health} />
+                <HealthBadge color={activeIndex.health} />
               </div>
             </div>
             <div className="text-right">
@@ -167,7 +192,7 @@ const IndexManagement = () => {
                 <TableCell className="font-medium">{index.index}</TableCell>
                 <TableCell>{index["docs.count"]}</TableCell>
                 <TableCell>
-                  <HealthBadge status={index.health} />
+                  <HealthBadge color={index.health} />
                 </TableCell>
                 <TableCell>
                   {new Date(
@@ -177,6 +202,7 @@ const IndexManagement = () => {
                 <TableCell className="space-x-2">
                   <Button
                     size="sm"
+                    variant="outline"
                     onClick={() => swapMutation.mutate(index.index)}
                     disabled={swapMutation.isPending}
                   >
@@ -206,9 +232,30 @@ const IndexManagement = () => {
         >
           {reindexMutation.isPending ? "Processing..." : "Run Full Reindex"}
         </Button>
-        <Button variant="secondary" className="w-full sm:w-auto">
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => refetch()}
+        >
           Check for Updates Now
         </Button>
+        <div className="flex items-center gap-4 mb-4">
+          <Label htmlFor="refetchInterval" className="font-semibold">
+            Auto-refetch interval (seconds):
+          </Label>
+          <Input
+            id="refetchInterval"
+            type="number"
+            min={5}
+            className="border rounded px-2 py-1 w-20"
+            value={refetchInterval}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              if (val >= 5) setRefetchInterval(val);
+            }}
+            title="Minimum 5 seconds"
+          />
+        </div>
       </div>
     </div>
   );

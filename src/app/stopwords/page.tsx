@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Stopword } from "../../types/types";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
+import Loader from "../utility/Loader";
 
 const fetchStopwords = async (): Promise<Stopword[]> => {
   const res = await fetch("/api/stopwords");
@@ -59,8 +60,6 @@ const StopwordsPage: React.FC = () => {
     queryFn: fetchStopwords,
   });
 
-  console.log(" stopwords:", stopwords);
-
   const addMutation = useMutation<Stopword, Error, string>({
     mutationFn: addStopword,
     onSuccess: (data) => {
@@ -97,8 +96,7 @@ const StopwordsPage: React.FC = () => {
     }
   };
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading stopwords...</div>;
+  if (isLoading) return <Loader />;
   if (error)
     return (
       <div className="text-red-500 text-center py-8">

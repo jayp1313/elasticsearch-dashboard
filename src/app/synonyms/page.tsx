@@ -17,6 +17,7 @@ import { SynonymSet } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
+import Loader from "../utility/Loader";
 
 const fetchSynonyms = async (): Promise<SynonymSet> => {
   const res = await fetch("/api/synonyms");
@@ -95,8 +96,7 @@ const SynonymsPage = () => {
     addMutation.mutate(newTerm.trim());
   };
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading synonyms...</div>;
+  if (isLoading) return <Loader />;
 
   if (isError)
     return (

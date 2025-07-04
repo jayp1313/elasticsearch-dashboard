@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AggregationParams } from "@/types/types";
+import { useMutation } from "@tanstack/react-query";
 
 const AGGREGATION_TYPES = [
   "avg",
@@ -23,14 +25,32 @@ const AGGREGATION_TYPES = [
   "date_histogram",
 ];
 
-const AGGREGATION_FIELDS = [
-  "price",
-  "stock",
-  "in_stock",
-  "category.keyword",
-  "name.keyword",
-  "created_at",
-];
+const AGGREGATION_FIELDS_MAP: Record<string, string[]> = {
+  avg: ["price", "stock"],
+  sum: ["price", "stock"],
+  min: ["price", "stock"],
+  max: ["price", "stock"],
+  terms: ["category.keyword", "name.keyword", "in_stock"],
+  histogram: ["price", "stock"],
+  date_histogram: ["created_at"],
+};
+
+export const fetchAggregation = async ({
+  aggType,
+  field,
+  interval,
+  size,
+}: AggregationParams): Promise<any> => {
+  const params = new URLSearchParams({ aggType, field });
+  if (aggType === "histogram" && interval)
+    params.append("interval", interval.toString());
+  if (aggType === "terms" && size) params.append("size", size.toString());
+
+  const res = await fetch(`/api/aggregations?${params.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch aggregation");
+
+  return res.json();
+};
 
 const AggregationsPage: React.FC = () => {
   const [aggType, setAggType] = useState("avg");
@@ -38,23 +58,27 @@ const AggregationsPage: React.FC = () => {
   const [interval, setInterval] = useState(10);
   const [bucketSize, setBucketSize] = useState(5);
   const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ aggType, field });
-      if (aggType === "histogram") params.append("interval", String(interval));
-      if (aggType === "terms") params.append("size", String(bucketSize));
+  const allowedFields = AGGREGATION_FIELDS_MAP[aggType] || [];
 
-      const res = await fetch(`/api/aggregations?${params.toString()}`);
-      const data = await res.json();
-      setResult(data);
-    } catch (error) {
-      console.error("Aggregation fetch failed", error);
-    } finally {
-      setLoading(false);
-    }
+  const mutation = useMutation({
+    mutationFn: (params: AggregationParams) => fetchAggregation(params),
+    onSuccess: (data) => setResult(data),
+    onError: (error: Error) => {
+      console.error("Aggregation fetch failed", error.message);
+    },
+  });
+
+  const handleSubmit = () => {
+    mutation.mutate({
+      aggType,
+      field,
+      interval:
+        aggType === "histogram" || aggType === "date_histogram"
+          ? interval
+          : undefined,
+      size: aggType === "terms" ? bucketSize : undefined,
+    });
   };
 
   return (
@@ -93,7 +117,7 @@ const AggregationsPage: React.FC = () => {
               <SelectValue placeholder="Select field" />
             </SelectTrigger>
             <SelectContent>
-              {AGGREGATION_FIELDS.map((f) => (
+              {allowedFields.map((f) => (
                 <SelectItem key={f} value={f}>
                   {f}
                 </SelectItem>
@@ -128,8 +152,8 @@ const AggregationsPage: React.FC = () => {
           </div>
         )}
 
-        <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? "Loading..." : "Run Aggregation"}
+        <Button onClick={handleSubmit} disabled={mutation.isPending}>
+          {mutation.isPending ? "Loading..." : "Run Aggregation"}
         </Button>
       </div>
 
