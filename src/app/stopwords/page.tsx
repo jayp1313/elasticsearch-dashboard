@@ -12,16 +12,23 @@ import {
 } from "@/components/ui/table";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { mockStopwords } from "../../lib/mockData";
 import { Stopword } from "../../types/types";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
+import Loader from "../utility/Loader";
 
 const fetchStopwords = async (): Promise<Stopword[]> => {
-  return mockStopwords;
+  const res = await fetch("/api/stopwords");
+  if (!res.ok) throw new Error("Failed to load stopwords");
+  const data = await res.json();
+
+  return (data.stopwords || []).map((word: string) => ({
+    id: word,
+    value: word,
+  }));
 };
 
 const addStopword = async (value: string): Promise<Stopword> => {
-  // Simulate API call
   return new Promise((resolve) => {
     setTimeout(() => {
       const newStopword = { id: Date.now().toString(), value };
@@ -32,7 +39,6 @@ const addStopword = async (value: string): Promise<Stopword> => {
 };
 
 const deleteStopword = async (id: string): Promise<void> => {
-  // Simulate API call
   return new Promise((resolve) => {
     setTimeout(() => {
       console.log(`Deleted stopword: ${id}`);
@@ -44,6 +50,7 @@ const deleteStopword = async (id: string): Promise<void> => {
 const StopwordsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [newWord, setNewWord] = useState("");
+
   const {
     data: stopwords,
     isLoading,
@@ -89,8 +96,7 @@ const StopwordsPage: React.FC = () => {
     }
   };
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading stopwords...</div>;
+  if (isLoading) return <Loader />;
   if (error)
     return (
       <div className="text-red-500 text-center py-8">
@@ -100,8 +106,7 @@ const StopwordsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Stopwords Management</h1>
-
+      <Header title="Stopwords Management" />
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={newWord}

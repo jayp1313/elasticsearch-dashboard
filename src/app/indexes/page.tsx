@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -9,60 +10,105 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { mockIndexes } from "../../lib/mockData";
 import { Index } from "../../types/types";
 import HealthBadge from "../../components/HealthBadge";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
+import { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Loader from "../utility/Loader";
 
 const fetchIndexes = async (): Promise<Index[]> => {
-  return mockIndexes.filter((idx) => idx.indexName.startsWith("product"));
+  const res = await fetch("/api/indexes");
+  if (!res.ok) throw new Error("Failed to fetch indexes");
+
+  const data = await res.json();
+
+  return data;
 };
 
-const swapIndex = async (newIndexName: string): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Swapped alias to ${newIndexName}`);
-      resolve();
-    }, 1000);
+const swapIndex = async (newIndex: string): Promise<void> => {
+  const res = await fetch("/api/indexes/swap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ newIndex }),
   });
+
+  if (!res.ok) {
+    const { error } = await res.json();
+    throw new Error(error || "Swap failed");
+  }
 };
 
 const deleteIndex = async (indexName: string): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Deleted index ${indexName}`);
-      resolve();
-    }, 1000);
+  const res = await fetch("/api/indexes/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: indexName }),
   });
+
+  if (!res.ok) {
+    const { error } = await res.json();
+    throw new Error(error || "Delete failed");
+  }
 };
 
 const runFullReindex = async (): Promise<void> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("Running full reindex");
-      resolve();
-    }, 1500);
+  const res = await fetch("/api/reindex", {
+    method: "POST",
   });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to start full reindex");
+  }
+
+  const data = await res.json();
+  console.log("Reindex started:", data);
 };
 
-const IndexManagement: React.FC = () => {
+const IndexManagement = () => {
   const queryClient = useQueryClient();
+
+  const [refetchInterval, setRefetchInterval] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("refetch_interval");
+      return saved ? parseInt(saved) : 60;
+    }
+    return 60;
+  });
+
   const {
     data: indexes,
     isLoading,
     error,
+    refetch,
   } = useQuery<Index[], Error>({
     queryKey: ["indexes"],
     queryFn: fetchIndexes,
   });
 
+  useEffect(() => {
+    if (refetchInterval < 5) return;
+    const timer = setInterval(() => {
+      sessionStorage.removeItem("elasticsearch_indexes");
+      refetch();
+    }, refetchInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [refetchInterval, refetch]);
+
+  useEffect(() => {
+    sessionStorage.setItem("refetch_interval", refetchInterval.toString());
+  }, [refetchInterval]);
+
   const swapMutation = useMutation<void, Error, string>({
     mutationFn: swapIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["indexes"] });
+      queryClient.invalidateQueries(["indexes"]);
+      sessionStorage.removeItem("elasticsearch_indexes");
+      window.location.reload();
       toast.success("Index swapped successfully!");
     },
     onError: (error) => {
@@ -73,7 +119,8 @@ const IndexManagement: React.FC = () => {
   const deleteMutation = useMutation<void, Error, string>({
     mutationFn: deleteIndex,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["indexes"] });
+      sessionStorage.removeItem("elasticsearch_indexes");
+      window.location.reload();
       toast.success("Index deleted successfully!");
     },
     onError: (error) => {
@@ -84,6 +131,8 @@ const IndexManagement: React.FC = () => {
   const reindexMutation = useMutation<void, Error>({
     mutationFn: runFullReindex,
     onSuccess: () => {
+      sessionStorage.removeItem("elasticsearch_indexes");
+      window.location.reload();
       toast.success("Full reindex started successfully!");
     },
     onError: (error) => {
@@ -91,8 +140,7 @@ const IndexManagement: React.FC = () => {
     },
   });
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading indexes...</div>;
+  if (isLoading) return <Loader />;
   if (error)
     return (
       <div className="text-red-500 text-center py-8">
@@ -105,23 +153,21 @@ const IndexManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Index Management</h1>
+      <Header title="Index Management" />
 
       {activeIndex && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="font-semibold">Active Index</h2>
-              <p className="text-lg">{activeIndex.indexName}</p>
+              <p className="text-lg">{activeIndex.index}</p>
               <div className="flex items-center mt-1">
                 <span className="mr-2">Health:</span>
-                <HealthBadge status={activeIndex.healthStatus} />
+                <HealthBadge color={activeIndex.health} />
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">
-                {activeIndex.documentCount.toLocaleString()}
-              </p>
+              <p className="text-2xl font-bold">{activeIndex["docs.count"]}</p>
               <p className="text-sm">documents</p>
             </div>
           </div>
@@ -142,27 +188,31 @@ const IndexManagement: React.FC = () => {
           </TableHeader>
           <TableBody>
             {oldIndexes.map((index) => (
-              <TableRow key={index.indexName}>
-                <TableCell className="font-medium">{index.indexName}</TableCell>
-                <TableCell>{index.documentCount.toLocaleString()}</TableCell>
+              <TableRow key={index.index}>
+                <TableCell className="font-medium">{index.index}</TableCell>
+                <TableCell>{index["docs.count"]}</TableCell>
                 <TableCell>
-                  <HealthBadge status={index.healthStatus} />
+                  <HealthBadge color={index.health} />
                 </TableCell>
                 <TableCell>
-                  {new Date(index.lastModified).toLocaleDateString()}
+                  {new Date(
+                    index?.lastModified || Date.now()
+                  ).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="space-x-2">
                   <Button
                     size="sm"
-                    onClick={() => swapMutation.mutate(index.indexName)}
+                    variant="outline"
+                    onClick={() => swapMutation.mutate(index.index)}
                     disabled={swapMutation.isPending}
                   >
                     {swapMutation.isPending ? "Swapping..." : "Make Active"}
                   </Button>
+
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => deleteMutation.mutate(index.indexName)}
+                    onClick={() => deleteMutation.mutate(index.index)}
                     disabled={deleteMutation.isPending}
                   >
                     {deleteMutation.isPending ? "Deleting..." : "Delete"}
@@ -182,9 +232,30 @@ const IndexManagement: React.FC = () => {
         >
           {reindexMutation.isPending ? "Processing..." : "Run Full Reindex"}
         </Button>
-        <Button variant="secondary" className="w-full sm:w-auto">
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => refetch()}
+        >
           Check for Updates Now
         </Button>
+        <div className="flex items-center gap-4 mb-4">
+          <Label htmlFor="refetchInterval" className="font-semibold">
+            Auto-refetch interval (seconds):
+          </Label>
+          <Input
+            id="refetchInterval"
+            type="number"
+            min={5}
+            className="border rounded px-2 py-1 w-20"
+            value={refetchInterval}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              if (val >= 5) setRefetchInterval(val);
+            }}
+            title="Minimum 5 seconds"
+          />
+        </div>
       </div>
     </div>
   );

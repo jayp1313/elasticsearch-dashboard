@@ -2,27 +2,37 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Sidebar from "../components/Sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/Sidebar";
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import MaxWidthWrapper from "./utility/MaxWidthWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
-
 const queryClient = new QueryClient();
 
-interface RootLayoutProps {
-  children: ReactNode;
-}
-
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} md:pl-64`}>
+      <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
           <ReactQueryDevtools initialIsOpen={false} />
-          <Sidebar />
-          <main className="p-4 md:p-6 min-h-screen bg-gray-50">{children}</main>
+          <SidebarProvider>
+            <div className="flex min-h-screen">
+              <div className="hidden md:block w-72">
+                <AppSidebar />
+              </div>
+
+              <div className="flex-1 flex flex-col">
+                <MaxWidthWrapper className="flex items-center">
+                  <main className="flex-1 py-5 md:w-6xl min-h-screen">
+                    {children}
+                  </main>
+                </MaxWidthWrapper>
+              </div>
+            </div>
+          </SidebarProvider>
           <Toaster position="top-right" richColors />
         </QueryClientProvider>
       </body>

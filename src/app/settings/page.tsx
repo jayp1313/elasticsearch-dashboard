@@ -2,16 +2,33 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { mockSettings } from "../../lib/mockData";
 import { Settings } from "../../types/types";
 import { useState } from "react";
+import { Header } from "@/components/Header";
+import { toast } from "sonner";
+import Loader from "../utility/Loader";
 
 const fetchSettings = async (): Promise<Settings> => {
-  return mockSettings; // Replace with API call later
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
 };
 
-const updateSettings = async (newSettings: Settings): Promise<void> => {
-  console.log("Updating settings:", newSettings); // Simulate API call
+const updateSettings = async (newSettings: Settings) => {
+  const res = await fetch("/api/settings", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(newSettings),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to update settings");
+  }
+
+  return res.json();
 };
 
 const SettingsPage: React.FC = () => {
@@ -23,25 +40,32 @@ const SettingsPage: React.FC = () => {
   } = useQuery<Settings, Error>({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    refetchOnWindowFocus: false,
   });
   const [form, setForm] = useState<Partial<Settings>>({});
 
   const mutation = useMutation<void, Error, Settings>({
     mutationFn: updateSettings,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Settings updated successfully!");
+    },
   });
 
-  if (isLoading) return <div className="text-center">Loading...</div>;
+  if (isLoading) return <Loader />;
   if (error) return <div className="text-red-500">Error: {error.message}</div>;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ ...settings, ...form });
+    mutation.mutate({
+      ...settings!,
+      ...form,
+    });
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Settings</h1>
+    <div className="space-y-6">
+      <Header title="Settings" />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">Old Indexes to Keep (default: 3)</label>

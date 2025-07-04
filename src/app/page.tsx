@@ -1,4 +1,5 @@
 "use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,12 +11,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { mockIndexes } from "../lib/mockData";
-import { Index } from "../types/types";
 import HealthBadge from "../components/HealthBadge";
+import { Index } from "@/types/types";
+import { Header } from "@/components/Header";
+import Loader from "./utility/Loader";
 
 const fetchIndexes = async (): Promise<Index[]> => {
-  return mockIndexes;
+  const res = await fetch("/api/indexes");
+  if (!res.ok) throw new Error("Failed to fetch indexes");
+
+  const data = await res.json();
+  return data;
+};
+
+export const fetchActiveIndex = async (): Promise<{
+  activeIndex: string;
+  alias: string;
+}> => {
+  const res = await fetch("/api/active-index");
+  if (!res.ok) throw new Error("Failed to fetch active index");
+  const data = await res.json();
+  return data;
 };
 
 export default function Dashboard() {
@@ -23,18 +39,29 @@ export default function Dashboard() {
     data: indexes,
     isLoading,
     error,
-  } = useQuery<Index[], Error>({
+  } = useQuery<Index[]>({
     queryKey: ["indexes"],
     queryFn: fetchIndexes,
   });
 
-  const activeIndex = indexes?.find((index) => index.alias === "products");
-  const totalDocuments =
-    indexes?.reduce((sum, index) => sum + index.documentCount, 0) || 0;
+  const { data: activeIndex } = useQuery({
+    queryKey: ["active-index"],
+    queryFn: fetchActiveIndex,
+  });
 
-  if (isLoading)
-    return <div className="text-center py-8">Loading dashboard data...</div>;
-  if (error)
+  const totalDocuments =
+    indexes?.reduce(
+      (sum, index) => sum + parseInt(index["docs.count"] || "0", 10),
+      0
+    ) || 0;
+
+  const activeIndexHealth = indexes?.find(
+    (index) => index.index === activeIndex?.activeIndex
+  )?.health;
+
+  if (isLoading) return <Loader />;
+
+  if (error instanceof Error)
     return (
       <div className="text-red-500 text-center py-8">
         Error: {error.message}
@@ -42,19 +69,19 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Elasticsearch Dashboard</h1>
+    <div className="space-y-6 px-4 md:px-0">
+      <Header title="Elasticsearch Dashboard" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Active Index</CardTitle>
+            <CardTitle className="text-base md:text-lg">Active Index</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl font-semibold">
-              {activeIndex?.indexName || "N/A"}
+            <p className="text-lg md:text-xl font-semibold break-words">
+              {activeIndex?.activeIndex || "N/A"}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 break-words">
               Alias: {activeIndex?.alias || "None"}
             </p>
           </CardContent>
@@ -62,10 +89,12 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Total Documents</CardTitle>
+            <CardTitle className="text-base md:text-lg">
+              Total Documents
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
+            <p className="text-2xl md:text-3xl font-bold">
               {totalDocuments.toLocaleString()}
             </p>
           </CardContent>
@@ -73,60 +102,70 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Index Health</CardTitle>
+            <CardTitle className="text-base md:text-lg">Index Health</CardTitle>
           </CardHeader>
           <CardContent>
             {activeIndex ? (
-              <HealthBadge status={activeIndex.healthStatus} />
+              <HealthBadge color={activeIndexHealth || "unknown"} />
             ) : (
-              <Badge variant="secondary">No active index</Badge>
+              <Badge>No active index</Badge>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>All Product Indexes</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Index Name</TableHead>
-                <TableHead>Alias</TableHead>
-                <TableHead>Documents</TableHead>
-                <TableHead>Health</TableHead>
-                <TableHead>Last Modified</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {indexes?.map((index) => (
-                <TableRow
-                  key={index.indexName}
-                  className={index.alias ? "bg-blue-50" : ""}
-                >
-                  <TableCell className="font-medium">
-                    {index.indexName}
-                  </TableCell>
-                  <TableCell>
-                    {index.alias ? (
-                      <Badge variant="default">{index.alias}</Badge>
-                    ) : (
-                      "N/A"
-                    )}
-                  </TableCell>
-                  <TableCell>{index.documentCount.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <HealthBadge status={index.healthStatus} />
-                  </TableCell>
-                  <TableCell>
-                    {new Date(index.lastModified).toLocaleString()}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">
+                    Index Name
+                  </TableHead>
+                  <TableHead className="whitespace-nowrap">Alias</TableHead>
+                  <TableHead className="whitespace-nowrap">Docs</TableHead>
+                  <TableHead className="whitespace-nowrap">Health</TableHead>
+                  <TableHead className="whitespace-nowrap">Size</TableHead>
+                  <TableHead className="whitespace-nowrap">
+                    Last Modified
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {indexes?.map((index) => (
+                  <TableRow
+                    key={index.index}
+                    className={index.alias ? "bg-blue-50" : ""}
+                  >
+                    <TableCell className="font-medium whitespace-nowrap">
+                      {index.index}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {index.alias ? (
+                        <Badge variant="default">{index.alias}</Badge>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {index["docs.count"]}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <HealthBadge color={index.health} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {index["store.size"] || "N/A"}
+                    </TableCell>
+                    <TableCell>{index.lastModified.toString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
