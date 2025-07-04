@@ -35,10 +35,24 @@ const MappingsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <Header title="Index Mappings" />
+      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg border">
+        <p className="leading-6">
+          Mappings define the structure of documents in an index, including
+          field types and data formats.
+        </p>
+      </div>
+
       {mapping &&
         Object.entries(mapping).map(([indexName, { mappings }]) => (
-          <div key={indexName} className="mb-10">
-            <h2 className="text-xl font-semibold mb-2">{indexName}</h2>
+          <div key={indexName} className="mb-10 space-y-6">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="font-semibold">Active Index</h2>
+                  <p className="text-lg">{indexName}</p>
+                </div>
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>

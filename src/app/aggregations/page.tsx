@@ -14,6 +14,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AggregationParams } from "@/types/types";
 import { useMutation } from "@tanstack/react-query";
+import { Loader2, BarChart4, Copy } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 const AGGREGATION_TYPES = [
   "avg",
@@ -82,90 +84,118 @@ const AggregationsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header title="Aggregations Control" />
-      <div className="text-sm text-gray-500">
-        <p>
+
+      <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg border">
+        <p className="leading-6">
           Aggregations help summarize and analyze your data. Select the type and
           field to run an aggregation.
         </p>
       </div>
 
-      <div className="flex gap-4 items-end flex-wrap">
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Aggregation Type
-          </label>
-          <Select value={aggType} onValueChange={setAggType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              {AGGREGATION_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Field</label>
-          <Select value={field} onValueChange={setField}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select field" />
-            </SelectTrigger>
-            <SelectContent>
-              {allowedFields.map((f) => (
-                <SelectItem key={f} value={f}>
-                  {f}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {aggType === "histogram" && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Interval</label>
-            <Input
-              type="number"
-              min={1}
-              value={interval}
-              onChange={(e) => setInterval(Number(e.target.value))}
-            />
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>Aggregation Type</Label>
+            <Select value={aggType} onValueChange={setAggType}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {AGGREGATION_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
-
-        {aggType === "terms" && (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Bucket Size
-            </label>
-            <Input
-              type="number"
-              min={1}
-              value={bucketSize}
-              onChange={(e) => setBucketSize(Number(e.target.value))}
-            />
+          <div className="space-y-2">
+            <Label>Field</Label>
+            <Select value={field} onValueChange={setField}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select field" />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedFields.map((f) => (
+                  <SelectItem key={f} value={f}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
 
-        <Button onClick={handleSubmit} disabled={mutation.isPending}>
-          {mutation.isPending ? "Loading..." : "Run Aggregation"}
-        </Button>
+          {aggType === "histogram" ? (
+            <div className="space-y-2">
+              <Label>Interval</Label>
+              <Input
+                type="number"
+                min={1}
+                value={interval}
+                onChange={(e) => setInterval(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          ) : aggType === "terms" ? (
+            <div className="space-y-2">
+              <Label>Bucket Size</Label>
+              <Input
+                type="number"
+                min={1}
+                value={bucketSize}
+                onChange={(e) => setBucketSize(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          ) : (
+            <div className="hidden md:block"></div>
+          )}
+
+          <div className="flex items-end justify-end">
+            <Button
+              onClick={handleSubmit}
+              disabled={mutation.isPending}
+              className="w-full md:w-auto"
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Run Aggregation"
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {result && (
-        <Card>
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Aggregation Result</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart4 className="h-5 w-5 text-primary" />
+              Aggregation Result
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="text-sm bg-gray-100 p-4 rounded overflow-auto">
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <div className="relative">
+              <pre className="text-sm p-4 rounded-lg bg-muted overflow-auto max-h-[500px]">
+                {JSON.stringify(result, null, 2)}
+              </pre>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-2 right-4"
+                onClick={() =>
+                  navigator.clipboard.writeText(JSON.stringify(result, null, 2))
+                }
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
