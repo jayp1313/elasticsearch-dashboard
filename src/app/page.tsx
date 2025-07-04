@@ -24,7 +24,7 @@ const fetchIndexes = async (): Promise<Index[]> => {
   return data;
 };
 
-export const fetchActiveIndex = async (): Promise<{
+const fetchActiveIndex = async (): Promise<{
   activeIndex: string;
   alias: string;
 }> => {
