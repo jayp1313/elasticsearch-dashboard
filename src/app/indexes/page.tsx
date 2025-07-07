@@ -277,13 +277,18 @@ const IndexManagement = () => {
 
         <Button
           variant="outline"
-          className="w-full sm:w-auto border-gray-300 hover:bg-gray-50"
+          className="w-full sm:w-auto "
           onClick={() => {
             sessionStorage.removeItem("indexesData");
             refetch();
           }}
+          disabled={isLoading}
         >
-          <RotateCw className="mr-2 h-4 w-4" />
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RotateCw className="mr-2 h-4 w-4" />
+          )}
           Check for Updates Now
         </Button>
 
