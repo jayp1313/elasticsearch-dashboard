@@ -104,6 +104,7 @@ const IndexManagement = () => {
   useEffect(() => {
     if (refetchInterval < 5) return;
     const timer = setInterval(() => {
+      sessionStorage.removeItem("indexesData");
       refetch();
     }, refetchInterval * 1000);
 
