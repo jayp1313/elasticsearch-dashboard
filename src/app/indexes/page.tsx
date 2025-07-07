@@ -67,7 +67,7 @@ const deleteIndex = async (indexName: string): Promise<void> => {
 };
 
 const runFullReindex = async (): Promise<void> => {
-  const res = await fetch("/api/reindex", {
+  const res = await fetch("/api/tasks/reindex", {
     method: "POST",
   });
 
@@ -104,6 +104,7 @@ const IndexManagement = () => {
   useEffect(() => {
     if (refetchInterval < 5) return;
     const timer = setInterval(() => {
+      sessionStorage.removeItem("indexesData");
       refetch();
     }, refetchInterval * 1000);
 
@@ -276,13 +277,18 @@ const IndexManagement = () => {
 
         <Button
           variant="outline"
-          className="w-full sm:w-auto border-gray-300 hover:bg-gray-50"
+          className="w-full sm:w-auto "
           onClick={() => {
             sessionStorage.removeItem("indexesData");
             refetch();
           }}
+          disabled={isLoading}
         >
-          <RotateCw className="mr-2 h-4 w-4" />
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RotateCw className="mr-2 h-4 w-4" />
+          )}
           Check for Updates Now
         </Button>
 

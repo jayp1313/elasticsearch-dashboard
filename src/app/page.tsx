@@ -15,6 +15,7 @@ import HealthBadge from "../components/HealthBadge";
 import { Index } from "@/types/types";
 import { Header } from "@/components/Header";
 import Loader from "./utility/Loader";
+import { useEffect, useState } from "react";
 
 const fetchIndexes = async (): Promise<Index[]> => {
   const cacheKey = "indexesData";
@@ -34,14 +35,32 @@ const fetchIndexes = async (): Promise<Index[]> => {
 };
 
 export default function Dashboard() {
+  const [refetchInterval] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("refetch_interval");
+      return saved ? parseInt(saved) : 60;
+    }
+    return 60;
+  });
   const {
     data: indexes,
     isLoading,
     error,
+    refetch,
   } = useQuery<Index[]>({
     queryKey: ["indexes"],
     queryFn: fetchIndexes,
   });
+
+  useEffect(() => {
+    if (refetchInterval < 5) return;
+    const timer = setInterval(() => {
+      sessionStorage.removeItem("indexesData");
+      refetch();
+    }, refetchInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [refetchInterval, refetch]);
 
   const totalDocuments =
     indexes?.reduce(
