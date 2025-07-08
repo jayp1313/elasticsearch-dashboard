@@ -181,7 +181,7 @@ const IndexManagement = () => {
                 <HealthBadge color={activeIndex.health} />
               </div>
             </div>
-            <div className="p-5">
+            <div className="md:p-5">
               <p className="text-3xl font-bold ">
                 {activeIndex["docs.count"]?.toLocaleString()}
               </p>
